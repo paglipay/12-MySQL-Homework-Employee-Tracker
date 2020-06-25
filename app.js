@@ -33,6 +33,7 @@ async function myIncuire(chioces) {
         console.log("You inputed a blank?!");
     }
 }
+
 let choice_list = [];
 choice_list.push([
     {
@@ -84,30 +85,47 @@ choice_list.push([
     }
 ]);
 
+let prompts_obj = {}
+prompts_obj.action = choice_list[0];
+prompts_obj.table = choice_list[1];
+prompts_obj.filter_by_column = choice_list[2];
+prompts_obj.filter_by_value = choice_list[3];
+prompts_obj.update_column = choice_list[4];
+prompts_obj.update_value = choice_list[5];
+
 (async () => {
-    let choice_list_length;
     let res_table = ''
     let res
 
-    res = await myIncuire(choice_list[0]);
+    res = await myIncuire(prompts_obj.action);
     sql_query_obj.push(res);
     if (res.action === 'INSERT') {
-        let question_list = [1, 5];
-        for (let i = 0; i < question_list.length; i++) {            
-            res = await myIncuire(choice_list[question_list[i]]);
+        let question_list = ['table', 'update_value'];
+        for (let i = 0; i < question_list.length; i++) {
+            res = await myIncuire(prompts_obj[question_list[i]]);
             sql_query_obj.push(res);
         }
-    } else if (res.action === 'UPDATE2') {
-
-    } else {
-        choice_list_length = 4;
-        for (let i = 1; i < choice_list_length; i++) {
-            if (choice_list[i][0].name === 'choice') {
+    } else if (res.action === 'UPDATE') {
+        let question_list = ['table', 'filter_by_column', 'filter_by_value', 'update_column', 'update_value'];
+        for (let i = 0; i < question_list.length; i++) {
+            if (prompts_obj[question_list[i]][0].name === 'choice') {
                 res_filter_by = sql_query_obj.filter(item => item.filter_by !== undefined)
                 res_table = sql_query_obj.filter(item => item.table !== undefined)
-                choice_list[i][0].choices = await custom_query('SELECT ' + res_filter_by[0].filter_by + ' FROM ' + res_table[0].table);
+                prompts_obj[question_list[i]][0].choices = await custom_query('SELECT ' + res_filter_by[0].filter_by + ' FROM ' + res_table[0].table);
             }
-            res = await myIncuire(choice_list[i]);
+            res = await myIncuire(prompts_obj[question_list[i]]);
+            sql_query_obj.push(res);
+        }
+    } else {
+        //let question_list = [1, 2, 3];
+        let question_list = ['table', 'filter_by_column', 'filter_by_value'];
+        for (let i = 0; i < question_list.length; i++) {
+            if (prompts_obj[question_list[i]][0].name === 'choice') {
+                res_filter_by = sql_query_obj.filter(item => item.filter_by !== undefined)
+                res_table = sql_query_obj.filter(item => item.table !== undefined)
+                prompts_obj[question_list[i]][0].choices = await custom_query('SELECT ' + res_filter_by[0].filter_by + ' FROM ' + res_table[0].table);
+            }
+            res = await myIncuire(prompts_obj[question_list[i]]);
             sql_query_obj.push(res);
         }
     }
@@ -126,13 +144,14 @@ const sql_query = async (data) => {
             break;
 
         case "UPDATE":
-            var query = `UPDATE ${data[1].table} SET tutorial_title = 'Learning JAVA' WHERE ${data[2].filter_by} = '${data[3].choice}'`;
+            var query = `UPDATE ${data[1].table} SET ${data[4].update_choice} = '${data[5].update_value}' WHERE ${data[2].filter_by} = '${data[3].choice}'`;
             break;
 
         case "DELETE":
             var query = `DELETE FROM ${data[1].table} WHERE ${data[2].filter_by} = '${data[3].choice}'`;
             break;
     }
+    console.log(query)
     const answer = await custom_query(query, {})
     console.log(answer)
 
